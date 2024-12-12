@@ -144,7 +144,7 @@ func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
 	mu := &sync.Mutex{}
 
 	// Generate the output filename based on the current timestamp
-	filename := fmt.Sprintf("commits_%s.json", time.Now().Format("2006-01-02"))
+	filename := fmt.Sprintf("commits_%s.json", time.Now().Format("2006-01-02_15-04-05"))
 
 	// Fetch repositories
 	repos, err := fetchRepositories(pagelen, date)
