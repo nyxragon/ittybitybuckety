@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/nyxragon/bitybuckety"
+	"//bitybuckety"
 )
 
 func main() {
