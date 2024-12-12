@@ -182,7 +182,6 @@ func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
 				}
 			}
 		}(repo)
-
 		totalFetched += pagelen
 		if totalFetched >= totalCommits {
 			break
