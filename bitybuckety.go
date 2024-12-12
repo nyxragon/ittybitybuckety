@@ -161,8 +161,27 @@ func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
 
 	totalFetched := 0
 	for _, repo := range repos {
+		// Fetch commits for this repository
 		wg.Add(1)
-		go fetchCommits(repo["full_name"], pagelen, repo["project_key"], repo["project_name"], repo["project_url"], commitCh, &wg)
+		go func(repo map[string]string) {
+			defer wg.Done()
+			fetchedCommits := 0
+			for {
+				// Check if we've already fetched enough commits
+				if totalFetched >= totalCommits {
+					return
+				}
+
+				// Fetch commits in batches
+				fetchCommits(repo["full_name"], pagelen, repo["project_key"], repo["project_name"], repo["project_url"], commitCh, &wg)
+				fetchedCommits += pagelen
+
+				// If fewer than pagelen commits are returned, stop fetching more commits
+				if fetchedCommits < pagelen {
+					break
+				}
+			}
+		}(repo)
 
 		totalFetched += pagelen
 		if totalFetched >= totalCommits {
@@ -175,3 +194,4 @@ func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
 
 	return filename, nil
 }
+
