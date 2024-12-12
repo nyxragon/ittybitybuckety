@@ -6,7 +6,7 @@ import (
 	"log"
 	"os"
 
-	"//bitybuckety"
+	"github.com/nyxragon/bitybuckety"
 )
 
 func main() {
@@ -20,7 +20,7 @@ func main() {
 		fmt.Println("Error: 'total' must be greater than 0.")
 		os.Exit(1)
 	}
-
+	
 	// Fetch commits and write to file
 	filename, err := bitybuckety.FetchCommitsAndWriteFile(*totalCommits, *date)
 	if err != nil {
