@@ -1,4 +1,4 @@
-package bitybuckety
+package bitbucket
 
 import (
 	"encoding/json"
@@ -11,16 +11,16 @@ import (
 
 // Commit structure remains the same
 type Commit struct {
-	Hash            string json:"hash"
-	AuthorName      string json:"author_name"
-	Date            string json:"date"
-	Message         string json:"message"
-	PatchLink       string json:"patch_link"
-	CommitURL       string json:"commit_url"
-	RepositoryLink  string json:"repository_link"
-	ProjectKey      string json:"project_key"
-	ProjectName     string json:"project_name"
-	ProjectURL      string json:"project_url"
+	Hash            string `json:"hash"`
+	AuthorName      string `json:"author_name"`
+	Date            string `json:"date"`
+	Message         string `json:"message"`
+	PatchLink       string `json:"patch_link"`
+	CommitURL       string `json:"commit_url"`
+	RepositoryLink  string `json:"repository_link"`
+	ProjectKey      string `json:"project_key"`
+	ProjectName     string `json:"project_name"`
+	ProjectURL      string `json:"project_url"`
 }
 
 // fetchRepositories fetches repositories from Bitbucket.
@@ -34,19 +34,19 @@ func fetchRepositories(pagelen int, before string) ([]map[string]string, error) 
 
 	var bitbucketResponse struct {
 		Values []struct {
-			Name      string json:"name"
-			FullName  string json:"full_name"
-			UpdatedOn string json:"updated_on"
+			Name      string `json:"name"`
+			FullName  string `json:"full_name"`
+			UpdatedOn string `json:"updated_on"`
 			Project   struct {
-				Key   string json:"key"
-				Name  string json:"name"
+				Key   string `json:"key"`
+				Name  string `json:"name"`
 				Links struct {
 					HTML struct {
-						Href string json:"href"
-					} json:"html"
-				} json:"links"
-			} json:"project"
-		} json:"values"
+						Href string `json:"href"`
+					} `json:"html"`
+				} `json:"links"`
+			} `json:"project"`
+		} `json:"values"`
 	}
 
 	if err := json.NewDecoder(resp.Body).Decode(&bitbucketResponse); err != nil {
@@ -83,19 +83,19 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 
 	var commitResponse struct {
 		Values []struct {
-			Hash    string json:"hash"
-			Date    string json:"date"
+			Hash    string `json:"hash"`
+			Date    string `json:"date"`
 			Author  struct {
 				User struct {
-					DisplayName string json:"display_name"
-				} json:"user"
-			} json:"author"
-			Message string json:"message"
+					DisplayName string `json:"display_name"`
+				} `json:"user"`
+			} `json:"author"`
+			Message string `json:"message"`
 			Links   struct {
-				Self  struct{ Href string } json:"self"
-				Patch struct{ Href string } json:"patch"
-			} json:"links"
-		} json:"values"
+				Self  struct{ Href string } `json:"self"`
+				Patch struct{ Href string } `json:"patch"`
+			} `json:"links"`
+		} `json:"values"`
 	}
 	if err := json.NewDecoder(resp.Body).Decode(&commitResponse); err != nil {
 		fmt.Printf("Error decoding commit response: %v\n", err)
