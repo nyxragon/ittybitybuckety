@@ -1,4 +1,4 @@
-package bitbucket
+package bitybuckety
 
 import (
 	"encoding/json"

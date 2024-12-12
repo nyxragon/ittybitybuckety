@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"log"
 
-	"bitbucket"
+	"bitybuckety"
 )
 
 func main() {
@@ -15,7 +15,7 @@ func main() {
 	flag.Parse()
 
 	// Fetch commits and write to file
-	filename, err := bitbucket.FetchCommitsAndWriteFile(*totalCommits, *date)
+	filename, err := bitybuckety.FetchCommitsAndWriteFile(*totalCommits, *date)
 	if err != nil {
 		log.Fatalf("Error: %v\n", err)
 	}
