@@ -9,26 +9,25 @@ This is a Go script that fetches commits from Bitbucket repositories and writes 
 - [Contributing](#contributing)
 - [License](#license)
 
-
 ## Running cli
 
 To run the script:
 
 1. Clone the repository:
 
-```bash
+```
 git clone https://github.com/nyxragon/bitybuckety.git
 ```
 
 2. Navigate to the `cli` directory:
 
-```bash
+```
 cd cli
 ```
 
 3. Run the script:
 
-```bash
+```
 go run main.go
 ```
 
@@ -44,7 +43,7 @@ To specify custom parameters:
 
 ### Example Usage
 
-```bash
+```
 go run main.go -date "2024-12-15T00:00:00+00:00" -total 50
 ```
 
