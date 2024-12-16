@@ -24,8 +24,8 @@ type Commit struct {
 }
 
 // fetchRepositories fetches repositories from Bitbucket.
-func fetchRepositories(pagelen int, before string) ([]map[string]string, error) {
-	url := fmt.Sprintf("https://api.bitbucket.org/2.0/repositories?pagelen=%d&before=%s", pagelen, before)
+func fetchRepositories(pagelen int, after string) ([]map[string]string, error) {
+	url := fmt.Sprintf("https://api.bitbucket.org/2.0/repositories?pagelen=%d&after=%s", pagelen, after)
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, fmt.Errorf("error fetching from Bitbucket API: %w", err)
@@ -138,7 +138,15 @@ func writeCommitToFile(commit Commit, filename string, mu *sync.Mutex) {
 
 // FetchCommitsAndWriteFile handles everything and writes commits to a file.
 func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
-	pagelen := 10 // Number of items to fetch per request
+	// Set default pagelen if not specified
+	pagelen := 500
+
+	// Set default date to 3 months prior if not specified
+	if date == "" {
+		threeMonthsAgo := time.Now().AddDate(0, -3, 0).Format(time.RFC3339)
+		date = threeMonthsAgo
+	}
+
 	var wg sync.WaitGroup
 	commitCh := make(chan Commit, pagelen)
 	mu := &sync.Mutex{}
