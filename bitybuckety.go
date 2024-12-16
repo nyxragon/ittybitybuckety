@@ -141,6 +141,9 @@ func writeCommitToFile(commit Commit, filename string) error {
 func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
 	pagelen := 100
 
+	if totalCommits == 0{
+		totalCommits=100
+	}
 	if date == "" {
         threeMonthsAgo := time.Now().AddDate(0, -3, 0).UTC().Format("2006-01-02T15:04:05.000000+00:00")
         date = threeMonthsAgo
