@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"sync"
 	"time"
 )
 
@@ -70,14 +69,11 @@ func fetchRepositories(pagelen int, after string) ([]map[string]string, error) {
 }
 
 // fetchCommits fetches commits from a specific repository.
-func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectName, projectURL string, commitCh chan<- Commit, wg *sync.WaitGroup) {
-	defer wg.Done()
-
+func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectName, projectURL string) ([]Commit, error) {
 	url := fmt.Sprintf("https://api.bitbucket.org/2.0/repositories/%s/commits?pagelen=%d", repositoryFullName, pagelen)
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Printf("Error fetching commits: %v\n", err)
-		return
+		return nil, fmt.Errorf("error fetching commits: %w", err)
 	}
 	defer resp.Body.Close()
 
@@ -97,89 +93,89 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 			} `json:"links"`
 		} `json:"values"`
 	}
+
 	if err := json.NewDecoder(resp.Body).Decode(&commitResponse); err != nil {
-		fmt.Printf("Error decoding commit response: %v\n", err)
-		return
+		return nil, fmt.Errorf("error decoding commit response: %w", err)
 	}
 
+	var commits []Commit
 	for _, commit := range commitResponse.Values {
-		commitCh <- Commit{
-			Hash:           commit.Hash,
-			AuthorName:     commit.Author.User.DisplayName,
-			Date:           commit.Date,
-			Message:        commit.Message,
-			PatchLink:      commit.Links.Patch.Href,
-			CommitURL:      commit.Links.Self.Href,
-			RepositoryLink: fmt.Sprintf("https://bitbucket.org/%s", repositoryFullName),
-			ProjectKey:     projectKey,
-			ProjectName:    projectName,
-			ProjectURL:     projectURL,
-		}
-	}
+		fmt.Println("Fetched commit:", commit)
+		
+        // Create Commit instance and append to slice
+        commits = append(commits, Commit{
+            Hash:           commit.Hash,
+            AuthorName:     commit.Author.User.DisplayName,
+            Date:           commit.Date,
+            Message:        commit.Message,
+            PatchLink:      commit.Links.Patch.Href,
+            CommitURL:      commit.Links.Self.Href,
+            RepositoryLink: fmt.Sprintf("https://bitbucket.org/%s", repositoryFullName),
+            ProjectKey:     projectKey,
+            ProjectName:    projectName,
+            ProjectURL:     projectURL,
+        })
+    }
+	return commits, nil
 }
 
 // writeCommitToFile writes a commit to a file.
-func writeCommitToFile(commit Commit, filename string, mu *sync.Mutex) {
-	mu.Lock()
-	defer mu.Unlock()
+func writeCommitToFile(commit Commit, filename string) error {
+	fmt.Println("Preparing to write commit:", commit)
 
 	file, err := os.OpenFile(filename, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
-		fmt.Printf("Error opening file: %v\n", err)
-		return
-	}
+        return fmt.Errorf("error opening file: %w", err)
+    }
 	defer file.Close()
 
-	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(commit); err != nil {
-		fmt.Printf("Error writing to file: %v\n", err)
-	}
+    encoder := json.NewEncoder(file)
+    if err := encoder.Encode(commit); err != nil {
+        return fmt.Errorf("error writing to file: %w", err)
+    }
+    
+    return nil
 }
 
 // FetchCommitsAndWriteFile handles everything and writes commits to a file.
 func FetchCommitsAndWriteFile(totalCommits int, date string) (string, error) {
-	// Set default pagelen if not specified
-	pagelen := 500
+	pagelen := 100
 
-	// Set default date to 3 months prior if not specified
 	if date == "" {
-		threeMonthsAgo := time.Now().AddDate(0, -3, 0).Format(time.RFC3339)
-		date = threeMonthsAgo
-	}
+        threeMonthsAgo := time.Now().AddDate(0, -3, 0).UTC().Format("2006-01-02T15:04:05.000000+00:00")
+        date = threeMonthsAgo
+    }
 
-	var wg sync.WaitGroup
-	commitCh := make(chan Commit, pagelen)
-	mu := &sync.Mutex{}
-
-	// Generate the output filename based on the current timestamp
 	filename := fmt.Sprintf("commits_%s.json", time.Now().Format("2006-01-02_15-04-05"))
 
-	// Fetch repositories
 	repos, err := fetchRepositories(pagelen, date)
 	if err != nil {
-		return "", fmt.Errorf("error fetching repositories: %w", err)
-	}
-
-	// Start fetching commits
-	go func() {
-		for commit := range commitCh {
-			writeCommitToFile(commit, filename, mu)
-		}
-	}()
+        return "", fmt.Errorf("error fetching repositories: %w", err)
+    }
 
 	totalFetched := 0
 	for _, repo := range repos {
-		wg.Add(1)
-		go fetchCommits(repo["full_name"], pagelen, repo["project_key"], repo["project_name"], repo["project_url"], commitCh, &wg)
+        if totalFetched >= totalCommits {
+            break
+        }
 
-		totalFetched += pagelen
-		if totalFetched >= totalCommits {
-			break
-		}
-	}
+        commits, err := fetchCommits(repo["full_name"], pagelen, repo["project_key"], repo["project_name"], repo["project_url"])
+        if err != nil {
+            return "", fmt.Errorf("error fetching commits for repository %s: %w", repo["full_name"], err)
+        }
 
-	wg.Wait()
-	close(commitCh)
+        for _, commit := range commits {
+            if totalFetched >= totalCommits { 
+                break 
+            }
+            if writeErr := writeCommitToFile(commit, filename); writeErr != nil { 
+                return "", writeErr 
+            }
+            totalFetched++
+        }
+    }
+
+	fmt.Println("Total fetched:", totalFetched)
 
 	return filename, nil
 }
