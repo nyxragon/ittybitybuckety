@@ -22,7 +22,7 @@ type Commit struct {
 	ProjectKey      string   `json:"project_key"`
 	ProjectName     string   `json:"project_name"`
 	ProjectURL      string   `json:"project_url"`
-	Subdomains      []string `json:"subdomains"` // Updated to be a slice of strings
+	Domains      []string `json:"domains"` // Updated to be a slice of strings
 }
 
 
@@ -124,7 +124,7 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 		}
 
 		// Process the patch content with textsubs
-		subdomains, err := textsubs.SubdomainsOnly(string(patchContent), true)
+		domains, err := textsubs.DomainsOnly(string(patchContent), true)
 		if err != nil {
 			fmt.Printf("Error processing patch content for commit %s: %v\n", commit.Hash, err)
 			continue
@@ -142,7 +142,7 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 			ProjectKey:     projectKey,
 			ProjectName:    projectName,
 			ProjectURL:     projectURL,
-			Subdomains:     subdomains, // Store the subdomains in the commit struct
+			Domains:        domains, // Store the domains in the commit struct
 		})
 	}
 	return commits, nil
