@@ -100,24 +100,35 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 
 	var commits []Commit
 	for _, commit := range commitResponse.Values {
-		fmt.Println("Fetched commit:", commit)
-		
-        // Create Commit instance and append to slice
-        commits = append(commits, Commit{
-            Hash:           commit.Hash,
-            AuthorName:     commit.Author.User.DisplayName,
-            Date:           commit.Date,
-            Message:        commit.Message,
-            PatchLink:      commit.Links.Patch.Href,
-            CommitURL:      commit.Links.Self.Href,
-            RepositoryLink: fmt.Sprintf("https://bitbucket.org/%s", repositoryFullName),
-            ProjectKey:     projectKey,
-            ProjectName:    projectName,
-            ProjectURL:     projectURL,
-        })
-    }
+		// Validate the PatchLink
+		patchResp, err := http.Head(commit.Links.Patch.Href)
+		if err != nil {
+			fmt.Printf("Error validating patch link for commit %s: %v\n", commit.Hash, err)
+			continue
+		}
+		patchResp.Body.Close()
+		if patchResp.StatusCode != http.StatusOK {
+			fmt.Printf("Invalid patch link for commit %s: %d\n", commit.Hash, patchResp.StatusCode)
+			continue
+		}
+
+		// Create Commit instance and append to slice
+		commits = append(commits, Commit{
+			Hash:           commit.Hash,
+			AuthorName:     commit.Author.User.DisplayName,
+			Date:           commit.Date,
+			Message:        commit.Message,
+			PatchLink:      commit.Links.Patch.Href,
+			CommitURL:      commit.Links.Self.Href,
+			RepositoryLink: fmt.Sprintf("https://bitbucket.org/%s", repositoryFullName),
+			ProjectKey:     projectKey,
+			ProjectName:    projectName,
+			ProjectURL:     projectURL,
+		})
+	}
 	return commits, nil
 }
+
 
 // writeCommitToFile writes a commit to a file.
 func writeCommitToFile(commit Commit, filename string) error {
