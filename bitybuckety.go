@@ -5,22 +5,26 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"io"
 	"time"
+	"github.com/0x4f53/textsubs"
 )
 
 // Commit structure remains the same
 type Commit struct {
-	Hash            string `json:"hash"`
-	AuthorName      string `json:"author_name"`
-	Date            string `json:"date"`
-	Message         string `json:"message"`
-	PatchLink       string `json:"patch_link"`
-	CommitURL       string `json:"commit_url"`
-	RepositoryLink  string `json:"repository_link"`
-	ProjectKey      string `json:"project_key"`
-	ProjectName     string `json:"project_name"`
-	ProjectURL      string `json:"project_url"`
+	Hash            string   `json:"hash"`
+	AuthorName      string   `json:"author_name"`
+	Date            string   `json:"date"`
+	Message         string   `json:"message"`
+	PatchLink       string   `json:"patch_link"`
+	CommitURL       string   `json:"commit_url"`
+	RepositoryLink  string   `json:"repository_link"`
+	ProjectKey      string   `json:"project_key"`
+	ProjectName     string   `json:"project_name"`
+	ProjectURL      string   `json:"project_url"`
+	Subdomains      []string `json:"subdomains"` // Updated to be a slice of strings
 }
+
 
 // fetchRepositories fetches repositories from Bitbucket.
 func fetchRepositories(pagelen int, after string) ([]map[string]string, error) {
@@ -68,7 +72,6 @@ func fetchRepositories(pagelen int, after string) ([]map[string]string, error) {
 	return repos, nil
 }
 
-// fetchCommits fetches commits from a specific repository.
 func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectName, projectURL string) ([]Commit, error) {
 	url := fmt.Sprintf("https://api.bitbucket.org/2.0/repositories/%s/commits?pagelen=%d", repositoryFullName, pagelen)
 	resp, err := http.Get(url)
@@ -101,14 +104,29 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 	var commits []Commit
 	for _, commit := range commitResponse.Values {
 		// Validate the PatchLink
-		patchResp, err := http.Head(commit.Links.Patch.Href)
+		patchResp, err := http.Get(commit.Links.Patch.Href)
 		if err != nil {
-			fmt.Printf("Error validating patch link for commit %s: %v\n", commit.Hash, err)
+			fmt.Printf("Error fetching patch link for commit %s: %v\n", commit.Hash, err)
 			continue
 		}
-		patchResp.Body.Close()
+		defer patchResp.Body.Close()
+
 		if patchResp.StatusCode != http.StatusOK {
 			fmt.Printf("Invalid patch link for commit %s: %d\n", commit.Hash, patchResp.StatusCode)
+			continue
+		}
+
+		// Read the patch content
+		patchContent, err := io.ReadAll(patchResp.Body)
+		if err != nil {
+			fmt.Printf("Error reading patch content for commit %s: %v\n", commit.Hash, err)
+			continue
+		}
+
+		// Process the patch content with textsubs
+		subdomains, err := textsubs.SubdomainsOnly(string(patchContent), true)
+		if err != nil {
+			fmt.Printf("Error processing patch content for commit %s: %v\n", commit.Hash, err)
 			continue
 		}
 
@@ -124,11 +142,11 @@ func fetchCommits(repositoryFullName string, pagelen int, projectKey, projectNam
 			ProjectKey:     projectKey,
 			ProjectName:    projectName,
 			ProjectURL:     projectURL,
+			Subdomains:     subdomains, // Store the subdomains in the commit struct
 		})
 	}
 	return commits, nil
 }
-
 
 // writeCommitToFile writes a commit to a file.
 func writeCommitToFile(commit Commit, filename string) error {
