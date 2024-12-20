@@ -10,25 +10,26 @@ import (
 )
 
 func main() {
-	// Define default values
-	defaultTotal := 100
-	defaultDate := ""
-
-	// Parse CLI flags
-	totalCommits := flag.Int("total", defaultTotal, "Total number of commits to fetch")
-	date := flag.String("date", defaultDate, "Fetch commits after this date (format: 2024-12-20T00:00:00+00:00). If not present, default will be used.")
+	// Parse CLI flags without default values
+	totalCommits := flag.Int("total", 0, "Total number of commits to fetch")
+	date := flag.String("date", "", "Fetch commits after this date (format: 2024-12-20T00:00:00+00:00). If not present, default will be used.")
 	flag.Parse()
 
-	// Check if the flags are set by the user
-	argsProvided := len(flag.Args()) > 0
+	// Debugging prints for values
+	fmt.Println("Total Commits:", *totalCommits)
+	fmt.Println("Date:", *date)
 
-	// Check if neither 'date' nor 'total' is provided and print a message
-	if !argsProvided {
+	// Check if flags were explicitly provided
+	totalProvided := *totalCommits != 0
+	dateProvided := *date != ""
+
+	// Print a message if no relevant flags were provided
+	if !totalProvided && !dateProvided {
 		fmt.Println("No arguments provided for date or total commits. Using default values.")
 	}
 
-	// Validate 'total' flag
-	if *totalCommits <= 0 {
+	// Validate 'total' flag (if explicitly provided)
+	if totalProvided && *totalCommits <= 0 {
 		fmt.Println("Error: 'total' must be greater than 0.")
 		os.Exit(1)
 	}
